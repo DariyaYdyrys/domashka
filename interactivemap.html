@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карта районов Алматы - Языковая статистика</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f23, #1a1a2e);
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(15, 15, 35, 0.95);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            background: linear-gradient(45deg, #00d4ff, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #a0a0a0;
+            text-align: center;
+        }
+
+        .map-container {
+            position: absolute;
+            top: 100px;
+            left: 0;
+            right: 0;
+            bottom: 250px;
+            overflow: hidden;
+            background-image: url('Almaty_districts.svg');
+            background-repeat: no-repeat;         /* ❌ отключает повтор */
+            background-position: center center;   /* 🎯 центрирует изображение */
+            background-size: contain;             /* 📐 сохраняет пропорции */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+
+        .map-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            overflow: hidden;
+        }
+
+        .map-wrapper:active {
+            cursor: grabbing;
+        }
+
+        .map-image {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 120%;
+        height: 120%;
+        background-image: url('../Almaty_districts.png'); /* относительный путь */
+        background-size: cover;
+        background-position: center;
+        transition: all 0.3s ease;
+        filter: contrast(1.1) brightness(1.1);
+        }
+
+
+        .district-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .district-zone {
+            position: absolute;
+            border: 3px solid;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            pointer-events: all;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(2px);
+        }
+
+        .district-zone:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+            z-index: 100;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+
+        .district-zone.selected {
+            background: rgba(0, 212, 255, 0.3);
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+            transform: scale(1.1);
+            z-index: 200;
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(15, 15, 35, 0.95);
+            backdrop-filter: blur(15px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            height: 250px;
+            transition: all 0.4s ease;
+            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .district-info {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+            align-items: center;
+            height: 100%;
+        }
+
+        .main-info {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(255, 255, 255, 0.05));
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 16px;
+            padding: 25px;
+            left: 250px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .district-name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #00d4ff;
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+
+        .quick-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .russian-stat { color: #ff6b6b; }
+        .english-stat { color: #4ecdc4; }
+
+        .stat-label {
+            font-size: 12px;
+            color: #a0a0a0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .lang-card, .schools-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .lang-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .lang-bar {
+            position: relative;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .lang-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.8s ease;
+        }
+
+        .russian-bar { background: linear-gradient(90deg, #ff6b6b, #ff8e8e); }
+        .english-bar { background: linear-gradient(90deg, #4ecdc4, #7ed7d2); }
+
+        .lang-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .school-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .school-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .controls {
+            position: absolute;
+            top: 120px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(15, 15, 35, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            min-width: 200px;
+        }
+
+        .control-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #00d4ff;
+        }
+
+        .control-item {
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #a0a0a0;
+            display: flex;
+            align-items: center;
+        }
+
+        .control-key {
+            display: inline-block;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin-right: 10px;
+            color: #ffffff;
+            font-weight: 600;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .default-message {
+            text-align: center;
+            color: #a0a0a0;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">Районы Алматы</div>
+            <div class="subtitle">Интерактивная карта с языковой статистикой и образовательными учреждениями • 2025</div>
+        </div>
+        </div>
+
+        <div class="map-container">
+            <div class="map-wrapper" id="mapWrapper">
+                <div class="map-image" id="mapImage"></div>
+                <div class="district-overlay">
+                    <!-- Районы будут добавлены через JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="district-info" id="districtInfo">
+                <div class="main-info">
+                    <div class="district-name" id="selectedDistrict">Районы</div>
+                    <div class="quick-stats" id="quickStats" style="display: none;">
+                        <div class="stat-item">
+                            <div class="stat-value russian-stat" id="russianPercent">--</div>
+                            <div class="stat-label">Русский язык</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value english-stat" id="englishPercent">--</div>
+                            <div class="stat-label">Английский язык</div>
+                        </div>
+                    </div>
+                    <div id="defaultText" class="default-message">
+                        Надо нажать на любую кнопку на панели карты для показа анализа
+                    </div>
+                </div>
+
+                <div class="lang-card" id="langCard" style="display: none;">
+                    <div class="card-title">Владение языками</div>
+                    <div class="lang-breakdown">
+                        <div>
+                            <div class="lang-info">
+                                <span>Русский</span>
+                                <span id="russianValue">--</span>
+                            </div>
+                            <div class="lang-bar">
+                                <div class="lang-bar-fill russian-bar" id="russianBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="lang-info">
+                                <span>Английский</span>
+                                <span id="englishValue">--</span>
+                            </div>
+                            <div class="lang-bar">
+                                <div class="lang-bar-fill english-bar" id="englishBar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="schools-card" id="schoolsCard" style="display: none;">
+                    <div class="card-title">Образование</div>
+                    <div class="school-stats">
+                        <div>
+                            <div class="school-number" id="russianSchools">--</div>
+                            <div style="font-size: 12px; color: #a0a0a0;">Русских школ</div>
+                        </div>
+                        <div>
+                            <div class="school-number" id="totalSchools">--</div>
+                            <div style="font-size: 12px; color: #a0a0a0;">Всего школ</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Данные о районах Алматы
+        const districtsData = {
+            'Медеуский': {
+                russian: 80, english: 25, russianSchools: 8, totalSchools: 25, 
+                color: '#E0FFFF', position: { top: '1%', left: '4%', width: '25%', height: '20%' }
+            },
+            'Бостандыкский': {
+                russian: 75, english: 35, russianSchools: 12, totalSchools: 34, 
+                color: '#90EE90', position: { top: '22%', left: '4%', width: '25%', height: '20%' }
+            },
+            'Алмалинский': {
+                russian: 90, english: 30, russianSchools: 12, totalSchools: 29, 
+                color: '#FFA07A', position: { top: '43%', left: '4%', width: '25%', height: '20%' }
+            },
+            'Ауэзовский': {
+                russian: 65, english: 15, russianSchools: 10, totalSchools: 32, 
+                color: '#FFFACD', position: { top: '64%', left: '4%', width: '25%', height: '20%' }
+            },
+            'Жетысуский': {
+                russian: 60, english: 10, russianSchools: 6, totalSchools: 25, 
+                color: '#40E0D0', position: { top: '1%', left: '71%', width: '25%', height: '20%' }
+            },
+            'Турксибский': {
+                russian: 55, english: 10, russianSchools: 6, totalSchools: 25, 
+                color: '#FFC0CB', position: { top: '22%', left: '71%', width: '25%', height: '20%' }
+            },
+            'Наурызбайский': {
+                russian: 35, english: 5, russianSchools: 0, totalSchools: 12, 
+                color: '#9b59b6', position: { top: '43%', left: '71%', width: '25%', height: '20%' }
+            },
+            'Алатауский': {
+                russian: 40, english: 8, russianSchools: 0, totalSchools: 31, 
+                color: '#e74c3c', position: { top: '64%', left: '71%', width: '25%', height: '20%' }
+            }
+        };
+
+        let currentZoom = 1;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+        let mapPosition = { x: 0, y: 0 };
+        let selectedDistrict = null;
+
+        function init() {
+            createDistrictZones();
+            setupMapControls();
+        }
+
+        function createDistrictZones() {
+            const overlay = document.querySelector('.district-overlay');
+            
+            Object.entries(districtsData).forEach(([name, data]) => {
+                const zone = document.createElement('div');
+                zone.className = 'district-zone';
+                zone.style.top = data.position.top;
+                zone.style.left = data.position.left;
+                zone.style.width = data.position.width;
+                zone.style.height = data.position.height;
+                zone.style.borderColor = data.color;
+                zone.textContent = name;
+                
+                zone.addEventListener('click', () => selectDistrict(name, zone));
+                
+                overlay.appendChild(zone);
+            });
+        }
+
+        function selectDistrict(districtName, zoneElement) {
+            // Сброс предыдущего выделения
+            if (selectedDistrict) {
+                selectedDistrict.classList.remove('selected');
+            }
+
+            // Выделение нового района
+            selectedDistrict = zoneElement;
+            zoneElement.classList.add('selected');
+
+            // Обновление информационной панели
+            updateInfoPanel(districtName);
+        }
+
+        function updateInfoPanel(districtName) {
+            const data = districtsData[districtName];
+            
+            // Показать карточки
+            document.getElementById('quickStats').style.display = 'grid';
+            document.getElementById('langCard').style.display = 'flex';
+            document.getElementById('schoolsCard').style.display = 'flex';
+            document.getElementById('defaultText').style.display = 'none';
+
+            // Обновить основную информацию
+            document.getElementById('selectedDistrict').textContent = districtName;
+            document.getElementById('russianPercent').textContent = data.russian + '%';
+            document.getElementById('englishPercent').textContent = data.english + '%';
+
+            // Обновить языковые барсы
+            document.getElementById('russianValue').textContent = data.russian + '%';
+            document.getElementById('englishValue').textContent = data.english + '%';
+            
+            setTimeout(() => {
+                document.getElementById('russianBar').style.width = data.russian + '%';
+                document.getElementById('englishBar').style.width = data.english + '%';
+            }, 100);
+
+            // Обновить информацию о школах
+            document.getElementById('russianSchools').textContent = data.russianSchools;
+            document.getElementById('totalSchools').textContent = data.totalSchools;
+        }
+
+        function setupMapControls() {
+            const mapWrapper = document.getElementById('mapWrapper');
+            const mapImage = document.getElementById('mapImage');
+
+            // Обработка перетаскивания карты
+            mapWrapper.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                dragStart.x = e.clientX - mapPosition.x;
+                dragStart.y = e.clientY - mapPosition.y;
+                mapWrapper.style.cursor = 'grabbing';
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                
+                mapPosition.x = e.clientX - dragStart.x;
+                mapPosition.y = e.clientY - dragStart.y;
+                
+                // Ограничения перемещения
+                const maxMove = 100;
+                mapPosition.x = Math.max(-maxMove, Math.min(maxMove, mapPosition.x));
+                mapPosition.y = Math.max(-maxMove, Math.min(maxMove, mapPosition.y));
+                
+                updateMapTransform();
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+                mapWrapper.style.cursor = 'grab';
+            });
+
+            // Обработка колеса мыши для зума
+            mapWrapper.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                currentZoom = Math.max(0.5, Math.min(3, currentZoom + delta));
+                updateMapTransform();
+            });
+        }
+
+        function updateMapTransform() {
+            const mapImage = document.getElementById('mapImage');
+            mapImage.style.transform = `translate(calc(-50% + ${mapPosition.x}px), calc(-50% + ${mapPosition.y}px)) scale(${currentZoom})`;
+        }
+
+        function zoomIn() {
+            currentZoom = Math.min(3, currentZoom + 0.2);
+            updateMapTransform();
+        }
+
+        function zoomOut() {
+            currentZoom = Math.max(0.5, currentZoom - 0.2);
+            updateMapTransform();
+        }
+
+        function resetZoom() {
+            currentZoom = 1;
+            mapPosition = { x: 0, y: 0 };
+            updateMapTransform();
+            
+            // Сброс выделения
+            if (selectedDistrict) {
+                selectedDistrict.classList.remove('selected');
+                selectedDistrict = null;
+            }
+
+            // Скрыть панели информации
+            document.getElementById('quickStats').style.display = 'none';
+            document.getElementById('langCard').style.display = 'none';
+            document.getElementById('schoolsCard').style.display = 'none';
+            document.getElementById('defaultText').style.display = 'block';
+            document.getElementById('selectedDistrict').textContent = 'Выберите район на карте';
+        }
+
+        // Инициализация
+        init();
+    </script>
+</body>
+</html>
